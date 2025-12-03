@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { UserButton } from '@clerk/nextjs';
 import { useUserStore } from '../../stores/userStore';
 import { useGameStore } from '../../stores/gameStore';
 import { GameHistory } from '../../types';
@@ -21,6 +23,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
   onViewProfile,
   onOpenSettings,
 }) => {
+  const { user } = useUser();
   const { users, gameHistory } = useUserStore();
   const { savedGameState, loadSavedGame } = useGameStore();
   const [selectedGame, setSelectedGame] = useState<GameHistory | null>(null);
@@ -40,7 +43,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
     <div className="min-h-screen h-screen overflow-y-auto p-6 pb-12">
       {/* Header */}
       <div className="text-center mb-6 pt-4">
-        <h1 className="text-4xl font-bold text-white mb-1">Darts Scorer</h1>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex-1" />
+          <div className="flex-1 flex justify-center">
+            <h1 className="text-4xl font-bold text-white">Darts Scorer</h1>
+          </div>
+          <div className="flex-1 flex justify-end">
+            <UserButton 
+              appearance={{
+                elements: {
+                  avatarBox: "w-10 h-10",
+                },
+              }}
+            />
+          </div>
+        </div>
+        {user && (
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <p className="text-white/80 text-sm">
+              Welcome, <span className="font-semibold">{user.firstName || user.username || user.primaryEmailAddress?.emailAddress || 'Player'}</span>
+            </p>
+          </div>
+        )}
         <p className="text-white/60 text-sm">Track your games like a pro</p>
       </div>
 
