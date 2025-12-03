@@ -50,21 +50,25 @@ If the build succeeds, you're ready to deploy!
 ### Option B: Deploy via Vercel CLI
 
 1. Install Vercel CLI:
+
    ```bash
    npm i -g vercel
    ```
 
 2. Login to Vercel:
+
    ```bash
    vercel login
    ```
 
 3. Deploy:
+
    ```bash
    vercel
    ```
-   
+
    Follow the prompts:
+
    - Set up and deploy? **Yes**
    - Which scope? (Select your account)
    - Link to existing project? **No** (for first deployment)
@@ -98,7 +102,32 @@ After deployment completes:
 
 ## Environment Variables
 
-This app doesn't require any environment variables as it's fully client-side with localStorage for data persistence.
+### Clerk Authentication
+
+This app uses [Clerk](https://clerk.com) for authentication. The following environment variables are required:
+
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Your Clerk publishable key
+- `CLERK_SECRET_KEY` - Your Clerk secret key
+
+These should be automatically configured if you've linked your Clerk application in Vercel (project name: `clerk-darts-next`). If not, you can:
+
+1. Get your keys from the [Clerk Dashboard](https://dashboard.clerk.com)
+2. Add them in Vercel: **Settings** → **Environment Variables**
+3. Add them to your local `.env.local` file for development:
+
+```bash
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+```
+
+### Local Development
+
+Create a `.env.local` file in the root directory with your Clerk keys:
+
+```bash
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_publishable_key
+CLERK_SECRET_KEY=your_secret_key
+```
 
 ## Build Settings
 
@@ -159,8 +188,8 @@ If something goes wrong:
 
 ## Notes
 
+- This app uses **Clerk** for user authentication
+- Protected routes require user sign-in (all routes except home page)
 - This app uses **localStorage** for data persistence, so data is stored in the user's browser
-- No backend/server required - fully static deployment
 - All game data is client-side only
 - The app works offline after initial load (PWA capabilities can be added later)
-
