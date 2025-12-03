@@ -7,9 +7,10 @@ interface HistoryScreenProps {
 }
 
 const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
-  const { gameHistory } = useUserStore();
+  const { gameHistory, deleteGameHistory } = useUserStore();
   const [filterType, setFilterType] = useState<GameType | 'all'>('all');
   const [selectedGame, setSelectedGame] = useState<GameHistory | null>(null);
+  const [gameToDelete, setGameToDelete] = useState<GameHistory | null>(null);
 
   // Filter and sort games
   const filteredGames = gameHistory
@@ -73,30 +74,49 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
             const playerCount = game.players.length;
 
             return (
-              <button
+              <div
                 key={game.id}
-                onClick={() => setSelectedGame(game)}
-                className="w-full p-4 bg-bg-card hover:bg-bg-elevated rounded-xl text-left transition-all"
+                className="p-4 bg-bg-card hover:bg-bg-elevated rounded-xl transition-all"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-lg font-bold text-white">
-                    {game.gameType === 'cricket' ? 'Cricket' : game.gameType}
-                  </span>
-                  <span className="text-white/40 text-sm">{formatDate(game.completedAt)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-white/60">{playerCount} players</span>
-                    <span className="text-white/40">•</span>
-                    <span className="text-white/60">Best of {game.rules.bestOf}</span>
-                  </div>
-                  {winner && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-neon-green">🏆 {winner.name}</span>
+                <div className="flex items-center justify-between gap-3">
+                  {/* Game info - clickable */}
+                  <button
+                    onClick={() => setSelectedGame(game)}
+                    className="flex-1 text-left"
+                  >
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className="text-lg font-bold text-white">
+                        {game.gameType === 'cricket' ? 'Cricket' : game.gameType}
+                      </span>
+                      <span className="text-white/40 text-sm">{formatDate(game.completedAt)}</span>
                     </div>
-                  )}
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="text-white/60 text-sm">{playerCount} players</span>
+                      <span className="text-white/40">•</span>
+                      <span className="text-white/60 text-sm">Best of {game.rules.bestOf}</span>
+                      {winner && (
+                        <>
+                          <span className="text-white/40">•</span>
+                          <span className="text-neon-green text-sm">🏆 {winner.name}</span>
+                        </>
+                      )}
+                    </div>
+                  </button>
+                  {/* Delete button - centered vertically and icon centered in button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setGameToDelete(game);
+                    }}
+                    className="w-9 h-9 flex items-center justify-center hover:bg-red-500/20 rounded-lg text-white/30 hover:text-red-400 transition-all flex-shrink-0"
+                    title="Delete game"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
@@ -198,6 +218,44 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {gameToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <div className="bg-bg-card rounded-2xl p-6 max-w-sm w-full animate-fade-in">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 mx-auto mb-4 bg-red-500/20 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">Delete Game?</h2>
+              <p className="text-white/60 text-sm">
+                Are you sure you want to delete this {gameToDelete.gameType === 'cricket' ? 'Cricket' : gameToDelete.gameType} game 
+                from {formatDate(gameToDelete.completedAt)}?
+              </p>
+              <p className="text-white/40 text-xs mt-2">This action cannot be undone.</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setGameToDelete(null)}
+                className="flex-1 py-3 bg-bg-elevated rounded-xl text-white font-medium hover:bg-bg-elevated/80 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  deleteGameHistory(gameToDelete.id);
+                  setGameToDelete(null);
+                }}
+                className="flex-1 py-3 bg-red-500 hover:bg-red-600 rounded-xl text-white font-bold transition-all"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

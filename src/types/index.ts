@@ -171,6 +171,7 @@ export interface CheckoutPath {
 // AI Settings
 export interface AISettings {
   globalMultiplier: number; // 0.5 - 2.0
+  showVisualization: boolean; // Show AI target and accuracy disc during gameplay
 }
 
 // App State

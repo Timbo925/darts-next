@@ -15,6 +15,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     });
   };
 
+  const handleVisualizationToggle = () => {
+    updateAISettings({
+      ...aiSettings,
+      showVisualization: !aiSettings.showVisualization,
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
       <div className="bg-bg-card rounded-2xl p-6 max-w-md w-full animate-fade-in">
@@ -86,6 +93,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                      'Default accuracy'}
                   </p>
                 </div>
+              </div>
+            </div>
+
+            {/* AI Visualization Toggle */}
+            <div className="bg-bg-dark rounded-lg p-3 mt-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/80 text-sm font-medium">Show AI Visualization</p>
+                  <p className="text-white/40 text-xs">Display target & accuracy disc during AI turns</p>
+                </div>
+                <button
+                  onClick={handleVisualizationToggle}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${
+                    aiSettings.showVisualization ? 'bg-neon-green' : 'bg-gray-600'
+                  }`}
+                >
+                  <div
+                    className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                      aiSettings.showVisualization ? 'translate-x-7' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
               </div>
             </div>
           </div>

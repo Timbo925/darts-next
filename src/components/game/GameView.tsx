@@ -7,7 +7,7 @@ import CricketScoreboard from '../scoring/CricketScoreboard';
 import LegWinnerModal from './LegWinnerModal';
 import GameWinnerScreen from './GameWinnerScreen';
 import { DartboardSegment, DartThrow, X01Score, CricketScore } from '../../types';
-import { simulateAIThrow } from '../../utils/ai/index';
+import { simulateAIThrow, getAIVisualizationData } from '../../utils/ai/index';
 import { formatSegment } from '../../utils/dartboard';
 import { getCheckoutPath } from '../../utils/checkout';
 
@@ -38,6 +38,13 @@ const GameView: React.FC<GameViewProps> = ({ onGameEnd }) => {
   
   // Track AI throws for the current turn only (with coordinates for display)
   const [aiTurnThrows, setAiTurnThrows] = useState<DartThrow[]>([]);
+  
+  // AI visualization data (target + accuracy disc)
+  const [aiVisualization, setAiVisualization] = useState<{
+    targetX: number;
+    targetY: number;
+    accuracyRadius: number;
+  } | null>(null);
 
   // Show bust notification when bustInfo changes
   useEffect(() => {
@@ -60,10 +67,11 @@ const GameView: React.FC<GameViewProps> = ({ onGameEnd }) => {
   // Check if human turn is complete and needs to advance
   const humanTurnComplete = !isAITurn && gameState !== null && gameState.currentThrowInTurn >= 3;
 
-  // Clear AI throws when player changes
+  // Clear AI throws and visualization when player changes
   useEffect(() => {
     if (!isAITurn) {
       setAiTurnThrows([]);
+      setAiVisualization(null);
     }
   }, [gameState?.currentPlayerIndex, isAITurn]);
 
@@ -99,8 +107,6 @@ const GameView: React.FC<GameViewProps> = ({ onGameEnd }) => {
       const aiPlayerId = currentPlayer!.id;
       
       while (dartsThrown < 3) {
-        await new Promise(resolve => setTimeout(resolve, 800));
-
         const currentState = gameStateRef.current;
         if (!currentState || currentState.matchWinnerId) break;
         
@@ -110,6 +116,20 @@ const GameView: React.FC<GameViewProps> = ({ onGameEnd }) => {
         // Check if it's still this AI's turn (bust causes turn change)
         const stillMyTurn = currentState.players[currentState.currentPlayerIndex]?.id === aiPlayerId;
         if (!stillMyTurn) break;
+
+        // Update AI visualization before throwing (if enabled)
+        if (aiSettings.showVisualization) {
+          const vizData = getAIVisualizationData(
+            currentState,
+            aiPlayerId,
+            currentPlayer!.difficulty || 5,
+            aiSettings.globalMultiplier
+          );
+          setAiVisualization(vizData);
+        }
+
+        // Wait to show visualization before throwing
+        await new Promise(resolve => setTimeout(resolve, 800));
 
         const aiThrow = simulateAIThrow(
           currentState,
@@ -125,6 +145,9 @@ const GameView: React.FC<GameViewProps> = ({ onGameEnd }) => {
         // Record in game state
         recordThrow(aiThrow);
         dartsThrown++;
+
+        // Clear visualization after throw
+        setAiVisualization(null);
 
         // Check again if bust occurred after recording throw
         const stateAfterThrow = gameStateRef.current;
@@ -250,7 +273,45 @@ const GameView: React.FC<GameViewProps> = ({ onGameEnd }) => {
     return [checkoutPath.darts[0]];
   };
 
-  const highlightedSegments = getCheckoutHighlightedSegments();
+  // Calculate unclosed number highlighting for Cricket games
+  const getCricketHighlightedSegments = (): DartboardSegment[] => {
+    // Only for Cricket games and human players
+    if (gameState.rules.gameType !== 'cricket' || isAITurn) return [];
+    
+    const currentScore = currentLeg.scores[currentPlayer!.id] as CricketScore;
+    if (!currentScore) return [];
+    
+    const cricketNumbers = [20, 19, 18, 17, 16, 15];
+    const highlighted: DartboardSegment[] = [];
+    
+    // Highlight ALL segments of each unclosed number (double, outer single, triple, inner single)
+    cricketNumbers.forEach(num => {
+      const mark = currentScore.marks.find(m => m.number === num);
+      if (!mark || !mark.closed) {
+        // Add all 4 segment types for this number
+        highlighted.push(
+          { number: num, type: 'double', points: num * 2, multiplier: 2 },
+          { number: num, type: 'single', points: num, multiplier: 1 },
+          { number: num, type: 'triple', points: num * 3, multiplier: 3 },
+        );
+      }
+    });
+    
+    // Check Bull (25) - highlight both inner and outer bull if not closed
+    const bullMark = currentScore.marks.find(m => m.number === 25);
+    if (!bullMark || !bullMark.closed) {
+      highlighted.push(
+        { number: 25, type: 'inner-bull', points: 50, multiplier: 2 },
+        { number: 25, type: 'outer-bull', points: 25, multiplier: 1 },
+      );
+    }
+    
+    return highlighted;
+  };
+
+  const highlightedSegments = gameState.rules.gameType === 'cricket' 
+    ? getCricketHighlightedSegments() 
+    : getCheckoutHighlightedSegments();
 
   // Current Turn Info Component (used in both normal and fullscreen mode)
   const CurrentTurnInfo = ({ compact = false }: { compact?: boolean }) => (
@@ -275,6 +336,7 @@ const GameView: React.FC<GameViewProps> = ({ onGameEnd }) => {
           const throwData = currentTurnThrows[i];
           const isActive = i === gameState.currentThrowInTurn;
           const isComplete = i < gameState.currentThrowInTurn;
+          const showPoints = gameState.rules.gameType !== 'cricket';
 
           return (
             <div
@@ -291,9 +353,11 @@ const GameView: React.FC<GameViewProps> = ({ onGameEnd }) => {
               <p className={`font-bold ${compact ? 'text-sm' : ''} ${throwData ? 'text-white' : 'text-white/20'}`}>
                 {throwData ? formatSegment(throwData.segment) : '-'}
               </p>
-              {/* Only show points for X01 games, not Cricket */}
-              {throwData?.segment && gameState.rules.gameType !== 'cricket' && (
-                <p className={`text-neon-green ${compact ? 'text-xs' : 'text-sm'}`}>{throwData.segment.points}</p>
+              {/* Points row - always reserve space for X01 games to prevent layout shift */}
+              {showPoints && (
+                <p className={`text-neon-green ${compact ? 'text-xs' : 'text-sm'} ${compact ? 'h-4' : 'h-5'}`}>
+                  {throwData?.segment ? throwData.segment.points : '\u00A0'}
+                </p>
               )}
             </div>
           );
@@ -466,6 +530,7 @@ const GameView: React.FC<GameViewProps> = ({ onGameEnd }) => {
             onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
             onCorrect={undoLastThrow}
             canCorrect={currentLeg.throws.length > 0 && !isAITurn}
+            aiVisualization={aiVisualization}
           />
 
           {/* Next player button - bottom center, only when needed */}

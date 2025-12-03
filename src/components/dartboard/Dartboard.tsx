@@ -11,6 +11,13 @@ import {
   polarToCartesian,
 } from '../../utils/dartboard';
 
+// AI Visualization data
+interface AIVisualization {
+  targetX: number;
+  targetY: number;
+  accuracyRadius: number;
+}
+
 interface DartboardProps {
   onThrow: (segment: DartboardSegment | null) => void;
   disabled?: boolean;
@@ -20,6 +27,7 @@ interface DartboardProps {
   onToggleFullscreen?: () => void;
   onCorrect?: () => void;
   canCorrect?: boolean;
+  aiVisualization?: AIVisualization | null;
 }
 
 const Dartboard: React.FC<DartboardProps> = ({
@@ -31,6 +39,7 @@ const Dartboard: React.FC<DartboardProps> = ({
   onToggleFullscreen,
   onCorrect,
   canCorrect = false,
+  aiVisualization = null,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
@@ -352,6 +361,53 @@ const Dartboard: React.FC<DartboardProps> = ({
     });
   };
 
+  // Render AI visualization (target + accuracy disc)
+  const renderAIVisualization = () => {
+    if (!aiVisualization) return null;
+
+    const { targetX, targetY, accuracyRadius } = aiVisualization;
+
+    return (
+      <g className="ai-visualization">
+        {/* Accuracy disc - semi-transparent circle showing throw variance */}
+        <circle
+          cx={targetX}
+          cy={targetY}
+          r={accuracyRadius}
+          fill="rgba(239, 68, 68, 0.15)"
+          stroke="#ef4444"
+          strokeWidth="1"
+          strokeDasharray="4 2"
+          className="animate-pulse"
+        />
+        {/* Target crosshair */}
+        <line
+          x1={targetX - 6}
+          y1={targetY}
+          x2={targetX + 6}
+          y2={targetY}
+          stroke="#3b82f6"
+          strokeWidth="1.5"
+        />
+        <line
+          x1={targetX}
+          y1={targetY - 6}
+          x2={targetX}
+          y2={targetY + 6}
+          stroke="#3b82f6"
+          strokeWidth="1.5"
+        />
+        {/* Target center dot */}
+        <circle
+          cx={targetX}
+          cy={targetY}
+          r={2}
+          fill="#3b82f6"
+        />
+      </g>
+    );
+  };
+
   return (
     <div className="relative w-full h-full flex items-center justify-center">
       {/* Fullscreen toggle button - only when not in fullscreen */}
@@ -403,6 +459,9 @@ const Dartboard: React.FC<DartboardProps> = ({
 
         {/* Checkout highlight overlay - rendered on top of all segments */}
         {renderHighlightOverlay()}
+
+        {/* AI target visualization (when enabled in debug settings) */}
+        {renderAIVisualization()}
 
         {/* Throw markers */}
         {renderThrowMarkers()}

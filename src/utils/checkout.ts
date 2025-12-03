@@ -223,6 +223,25 @@ export function getCheckoutPath(
   return { score, darts, possible: true };
 }
 
+// Find the best setup segment for a given points value
+// Prefers singles over doubles/triples for easier hitting
+function findBestSetupSegment(allSegments: DartboardSegment[], points: number): DartboardSegment | undefined {
+  const candidates = allSegments.filter(s => s.points === points);
+  if (candidates.length === 0) return undefined;
+  
+  // Prefer singles, then outer-bull, then doubles, then triples, then inner-bull
+  const priority: Record<string, number> = {
+    'single': 1,
+    'outer-bull': 2,
+    'double': 3,
+    'triple': 4,
+    'inner-bull': 5,
+  };
+  
+  candidates.sort((a, b) => (priority[a.type] || 99) - (priority[b.type] || 99));
+  return candidates[0];
+}
+
 // Find a checkout path that uses a specific double
 function findPathWithDouble(
   score: number,
@@ -245,9 +264,9 @@ function findPathWithDouble(
   // Try to find a setup for the remaining score
   const allSegments = getAllSegments();
   
-  // One dart setup + double
+  // One dart setup + double (prefer singles for setup shots)
   if (dartsRemaining >= 2) {
-    const singleDartSetup = allSegments.find(s => s.points === remaining);
+    const singleDartSetup = findBestSetupSegment(allSegments, remaining);
     if (singleDartSetup) {
       return {
         score,
@@ -262,7 +281,7 @@ function findPathWithDouble(
     for (const s1 of allSegments) {
       if (s1.points >= remaining) continue;
       const remainder = remaining - s1.points;
-      const s2 = allSegments.find(s => s.points === remainder);
+      const s2 = findBestSetupSegment(allSegments, remainder);
       if (s2) {
         return {
           score,
@@ -292,12 +311,12 @@ function calculateCheckoutPath(score: number, dartsRemaining: number): CheckoutP
     }
   }
 
-  // Two dart checkout
+  // Two dart checkout (prefer singles for setup shots)
   if (dartsRemaining >= 2) {
     for (const double of doubles) {
       if (double.points > score) continue;
       const remaining = score - double.points;
-      const setup = allSegments.find(s => s.points === remaining);
+      const setup = findBestSetupSegment(allSegments, remaining);
       if (setup) {
         return { score, darts: [setup, double], possible: true };
       }
@@ -313,7 +332,7 @@ function calculateCheckoutPath(score: number, dartsRemaining: number): CheckoutP
       for (const s1 of allSegments) {
         if (s1.points >= remaining) continue;
         const r2 = remaining - s1.points;
-        const s2 = allSegments.find(s => s.points === r2);
+        const s2 = findBestSetupSegment(allSegments, r2);
         if (s2) {
           return { score, darts: [s1, s2, double], possible: true };
         }

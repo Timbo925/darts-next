@@ -100,4 +100,33 @@ export function getAIPlayerInfo(player: Player): {
   };
 }
 
+/**
+ * Get AI visualization data (target coordinates and accuracy radius)
+ * Used for debug visualization on the dartboard
+ */
+export function getAIVisualizationData(
+  gameState: GameState,
+  playerId: string,
+  difficulty: number,
+  globalMultiplier: number = 1
+): { targetX: number; targetY: number; accuracyRadius: number } | null {
+  const player = gameState.players.find(p => p.id === playerId);
+  const effectiveDifficulty = player?.difficulty || difficulty;
+
+  // Determine target based on game state and strategy
+  const target = determineAITarget(gameState, playerId, effectiveDifficulty);
+  
+  // Get center coordinates of target segment
+  const targetCenter = getSegmentCenter(target.number, target.type);
+  
+  // Calculate accuracy radius based on difficulty
+  const accuracyRadius = getAccuracyRadius(effectiveDifficulty, globalMultiplier);
+  
+  return {
+    targetX: targetCenter.x,
+    targetY: targetCenter.y,
+    accuracyRadius,
+  };
+}
+
 

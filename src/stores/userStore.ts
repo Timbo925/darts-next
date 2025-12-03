@@ -11,6 +11,7 @@ interface UserState {
   createUser: (username: string, avatarColor: string) => UserAccount;
   deleteUser: (userId: string) => void;
   addGameHistory: (history: GameHistory) => void;
+  deleteGameHistory: (gameId: string) => void;
   updateAISettings: (settings: AISettings) => void;
   getUserStatistics: (userId: string) => UserStatistics;
 }
@@ -22,6 +23,7 @@ export const useUserStore = create<UserState>()(
       gameHistory: [],
       aiSettings: {
         globalMultiplier: 1.0,
+        showVisualization: false,
       },
 
       createUser: (username: string, avatarColor: string): UserAccount => {
@@ -46,6 +48,12 @@ export const useUserStore = create<UserState>()(
       addGameHistory: (history: GameHistory) => {
         set((state) => ({
           gameHistory: [...state.gameHistory, history],
+        }));
+      },
+
+      deleteGameHistory: (gameId: string) => {
+        set((state) => ({
+          gameHistory: state.gameHistory.filter((g) => g.id !== gameId),
         }));
       },
 
