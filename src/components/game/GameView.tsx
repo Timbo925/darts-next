@@ -20,6 +20,7 @@ const GameView: React.FC<GameViewProps> = ({ onGameEnd }) => {
     gameState, 
     legWinnerInfo,
     bustInfo,
+    savedGameState,
     recordThrow, 
     undoLastThrow, 
     nextTurn, 
@@ -28,6 +29,7 @@ const GameView: React.FC<GameViewProps> = ({ onGameEnd }) => {
     endGame, 
     resetGame,
     calculateGameStats,
+    saveGameForLater,
   } = useGameStore();
   const { aiSettings, addGameHistory } = useUserStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -35,6 +37,7 @@ const GameView: React.FC<GameViewProps> = ({ onGameEnd }) => {
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [showEndGameModal, setShowEndGameModal] = useState(false);
   const [showBustNotification, setShowBustNotification] = useState(false);
+  const [showOverrideConfirm, setShowOverrideConfirm] = useState(false);
   
   // Track AI throws for the current turn only (with coordinates for display)
   const [aiTurnThrows, setAiTurnThrows] = useState<DartThrow[]>([]);
@@ -224,6 +227,24 @@ const GameView: React.FC<GameViewProps> = ({ onGameEnd }) => {
     resetGame();
     onGameEnd();
   }, [resetGame, onGameEnd]);
+
+  // Save game to continue later
+  const handleSaveForLater = useCallback(() => {
+    // Check if there's already a saved game
+    if (savedGameState) {
+      setShowOverrideConfirm(true);
+    } else {
+      saveGameForLater();
+      onGameEnd();
+    }
+  }, [savedGameState, saveGameForLater, onGameEnd]);
+
+  // Confirm override of existing saved game
+  const handleConfirmOverride = useCallback(() => {
+    setShowOverrideConfirm(false);
+    saveGameForLater();
+    onGameEnd();
+  }, [saveGameForLater, onGameEnd]);
 
   if (!gameState || !currentLeg) {
     return <div className="text-white">Loading game...</div>;
@@ -563,14 +584,26 @@ const GameView: React.FC<GameViewProps> = ({ onGameEnd }) => {
           <div className="bg-bg-card rounded-2xl p-6 max-w-sm w-full animate-fade-in">
             <h2 className="text-xl font-bold text-white mb-4">End Game?</h2>
             <p className="text-white/60 mb-6">
-              Do you want to save this game to history or quit without saving?
+              What would you like to do with this game?
             </p>
             <div className="space-y-3">
               <button
-                onClick={handleEndGame}
-                className="w-full py-3 bg-neon-green rounded-xl text-black font-bold hover:opacity-90 transition-all"
+                onClick={handleSaveForLater}
+                className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl text-black font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2"
               >
-                Save & Exit
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Save & Continue Later
+              </button>
+              <button
+                onClick={handleEndGame}
+                className="w-full py-3 bg-neon-green rounded-xl text-black font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                End Game & Save to History
               </button>
               <button
                 onClick={handleQuit}
@@ -583,6 +616,50 @@ const GameView: React.FC<GameViewProps> = ({ onGameEnd }) => {
                 className="w-full py-3 bg-bg-elevated rounded-xl text-white/60 hover:text-white transition-all"
               >
                 Continue Playing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Override Saved Game Confirmation */}
+      {showOverrideConfirm && savedGameState && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <div className="bg-bg-card rounded-2xl p-6 max-w-sm w-full animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-white">Saved Game Exists</h2>
+            </div>
+            <p className="text-white/60 mb-2">
+              You already have a saved game:
+            </p>
+            <div className="bg-bg-elevated rounded-lg p-3 mb-4">
+              <div className="text-white font-medium">
+                {savedGameState.rules.gameType === 'cricket' ? 'Cricket' : savedGameState.rules.gameType}
+              </div>
+              <div className="text-white/50 text-sm">
+                Leg {savedGameState.currentLegIndex + 1} • {savedGameState.players.map(p => p.name).join(' vs ')}
+              </div>
+            </div>
+            <p className="text-amber-400/80 text-sm mb-6">
+              Saving this game will overwrite the existing saved game. This cannot be undone.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={handleConfirmOverride}
+                className="w-full py-3 bg-amber-500 rounded-xl text-black font-bold hover:bg-amber-400 transition-all"
+              >
+                Override & Save Current Game
+              </button>
+              <button
+                onClick={() => setShowOverrideConfirm(false)}
+                className="w-full py-3 bg-bg-elevated rounded-xl text-white/60 hover:text-white transition-all"
+              >
+                Cancel
               </button>
             </div>
           </div>

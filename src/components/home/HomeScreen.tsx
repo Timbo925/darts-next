@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useUserStore } from '../../stores/userStore';
+import { useGameStore } from '../../stores/gameStore';
 import { GameHistory } from '../../types';
 import GameDetailModal from './GameDetailModal';
 
 interface HomeScreenProps {
   onNewGame: () => void;
+  onContinueGame: () => void;
   onViewHistory: () => void;
   onViewProfile: () => void;
   onOpenSettings: () => void;
@@ -12,12 +14,21 @@ interface HomeScreenProps {
 
 const HomeScreen: React.FC<HomeScreenProps> = ({
   onNewGame,
+  onContinueGame,
   onViewHistory,
   onViewProfile,
   onOpenSettings,
 }) => {
   const { users, gameHistory } = useUserStore();
+  const { savedGameState, loadSavedGame } = useGameStore();
   const [selectedGame, setSelectedGame] = useState<GameHistory | null>(null);
+  
+  const hasSavedGame = savedGameState !== null;
+  
+  const handleContinueGame = () => {
+    loadSavedGame();
+    onContinueGame();
+  };
 
   // Get some quick stats
   const totalGames = gameHistory.length;
@@ -43,6 +54,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
           </svg>
           New Game
         </button>
+
+        {/* Continue Saved Game */}
+        {hasSavedGame && savedGameState && (
+          <button
+            onClick={handleContinueGame}
+            className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl text-black font-bold text-lg hover:opacity-90 transition-all shadow-lg shadow-orange-500/20 flex items-center justify-center gap-3"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <div className="flex flex-col items-start">
+              <span>Continue Game</span>
+              <span className="text-xs font-normal opacity-70">
+                {savedGameState.rules.gameType === 'cricket' ? 'Cricket' : savedGameState.rules.gameType} • 
+                Leg {savedGameState.currentLegIndex + 1} • 
+                {savedGameState.players.map(p => p.name).join(' vs ')}
+              </span>
+            </div>
+          </button>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <button

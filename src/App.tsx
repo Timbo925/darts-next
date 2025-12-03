@@ -29,6 +29,7 @@ function App() {
       {currentView === 'home' && (
         <HomeScreen
           onNewGame={() => setCurrentView('wizard')}
+          onContinueGame={() => setCurrentView('game')}
           onViewHistory={() => setCurrentView('history')}
           onViewProfile={() => setCurrentView('profile')}
           onOpenSettings={() => setShowSettings(true)}

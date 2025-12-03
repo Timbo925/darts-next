@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import {
   GameState,
   GameRules,
@@ -61,6 +62,7 @@ interface GameStore {
   gameState: GameState | null;
   legWinnerInfo: LegStatistics | null; // Track when we need to show leg winner modal
   bustInfo: { playerId: string; scoreBeforeBust: number } | null; // Track bust for UI feedback
+  savedGameState: GameState | null; // Saved game for "continue later" feature
   
   // Actions
   startGame: (rules: GameRules, players: Player[]) => void;
@@ -71,6 +73,12 @@ interface GameStore {
   clearBust: () => void; // Clear bust notification
   endGame: () => GameHistory | null;
   resetGame: () => void;
+  
+  // Save/Load game
+  saveGameForLater: () => void;
+  loadSavedGame: () => void;
+  clearSavedGame: () => void;
+  hasSavedGame: () => boolean;
   
   // Helpers
   calculateLegStats: (leg: LegState, players: Player[], rules: GameRules) => LegStatistics | null;
@@ -705,10 +713,13 @@ function calculateStatistics(state: GameState): GameStatistics {
   };
 }
 
-export const useGameStore = create<GameStore>()((set, get) => ({
-  gameState: null,
-  legWinnerInfo: null,
-  bustInfo: null,
+export const useGameStore = create<GameStore>()(
+  persist(
+    (set, get) => ({
+      gameState: null,
+      legWinnerInfo: null,
+      bustInfo: null,
+      savedGameState: null,
 
   startGame: (rules: GameRules, players: Player[]) => {
     const legsWon: Record<string, number> = {};
@@ -1027,4 +1038,43 @@ export const useGameStore = create<GameStore>()((set, get) => ({
   resetGame: () => {
     set({ gameState: null, legWinnerInfo: null, bustInfo: null });
   },
-}));
+
+  saveGameForLater: () => {
+    const state = get().gameState;
+    if (state) {
+      set({ 
+        savedGameState: state, 
+        gameState: null, 
+        legWinnerInfo: null, 
+        bustInfo: null 
+      });
+    }
+  },
+
+  loadSavedGame: () => {
+    const saved = get().savedGameState;
+    if (saved) {
+      set({ 
+        gameState: saved, 
+        savedGameState: null, 
+        legWinnerInfo: null, 
+        bustInfo: null 
+      });
+    }
+  },
+
+  clearSavedGame: () => {
+    set({ savedGameState: null });
+  },
+
+  hasSavedGame: () => {
+    return get().savedGameState !== null;
+  },
+    }),
+    {
+      name: 'darts-game-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ savedGameState: state.savedGameState }),
+    }
+  )
+);
