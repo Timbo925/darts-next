@@ -47,9 +47,10 @@ A beautiful and interactive React web application for scoring darts games. Play 
 
 ## Tech Stack
 
-- **React** + **TypeScript**
-- **Vite** for fast development
-- **Tailwind CSS** for styling
+- **Next.js 15** with App Router
+- **React 19** + **TypeScript**
+- **Tailwind CSS v4** for styling
+- **Zustand** for state management
 - **localStorage** for persistence
 
 ## Getting Started
@@ -63,7 +64,14 @@ npm run dev
 
 # Build for production
 npm run build
+
+# Start production server
+npm start
 ```
+
+## Deployment
+
+This app is ready to deploy to Vercel. See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
 
 ## Usage
 
